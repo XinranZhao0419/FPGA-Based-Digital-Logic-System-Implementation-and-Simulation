@@ -1,0 +1,34 @@
+`timescale 1ns / 1ps
+//          bcd_out[3:0]   -> 个位
+//          bcd_out[7:4]   -> 十位
+
+module binary_to_bcd_03 (
+    input  wire [31:0] bin_in,
+    output reg  [31:0] bcd_out
+);
+
+    integer i;
+    reg [31:0] bcd;
+    reg [31:0] bin;
+
+    always @(*) begin
+        bcd = 32'd0;
+        bin = bin_in;
+
+        for (i = 0; i < 32; i = i + 1) begin
+            if (bcd[3:0]   >= 5) bcd[3:0]   = bcd[3:0]   + 4'd3;
+            if (bcd[7:4]   >= 5) bcd[7:4]   = bcd[7:4]   + 4'd3;
+            if (bcd[11:8]  >= 5) bcd[11:8]  = bcd[11:8]  + 4'd3;
+            if (bcd[15:12] >= 5) bcd[15:12] = bcd[15:12] + 4'd3;
+            if (bcd[19:16] >= 5) bcd[19:16] = bcd[19:16] + 4'd3;
+            if (bcd[23:20] >= 5) bcd[23:20] = bcd[23:20] + 4'd3;
+            if (bcd[27:24] >= 5) bcd[27:24] = bcd[27:24] + 4'd3;
+            if (bcd[31:28] >= 5) bcd[31:28] = bcd[31:28] + 4'd3;
+
+            {bcd, bin} = {bcd, bin} << 1;
+        end
+
+        bcd_out = bcd;
+    end
+
+endmodule

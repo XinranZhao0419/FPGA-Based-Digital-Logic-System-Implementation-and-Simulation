@@ -1,0 +1,96 @@
+`timescale 1ns / 1ps
+
+
+module Seg7_8b_03 (
+    input  wire        clk,         // 时钟
+    input  wire        rsl,         // 低电平复位 reset low
+
+    input  wire [31:0] data,        // 8 个 BCD 数字，每 4bit 一位，data[3:0] 为最低位
+
+    output reg         a,           // 段信号，高电平点亮
+    output reg         b,
+    output reg         c,
+    output reg         d,
+    output reg         e,
+    output reg         f,
+    output reg         g,
+    output reg         h,           // 这里作为小数点 dp（也可以不用）
+
+    output reg  [7:0]  ds           // 位选，低电平有效
+);
+
+
+    reg [15:0] div_cnt;
+
+    always @(posedge clk or negedge rsl) begin
+        if (!rsl)
+            div_cnt <= 16'd0;
+        else
+            div_cnt <= div_cnt + 16'd1;
+    end
+
+    wire [2:0] scan_sel = div_cnt[15:13];
+
+
+    reg [3:0] cur_bcd;
+
+    always @(*) begin
+        case (scan_sel)
+            3'd0: cur_bcd = data[ 3: 0];    // 最右边一位
+            3'd1: cur_bcd = data[ 7: 4];
+            3'd2: cur_bcd = data[11: 8];
+            3'd3: cur_bcd = data[15:12];
+            3'd4: cur_bcd = data[19:16];
+            3'd5: cur_bcd = data[23:20];
+            3'd6: cur_bcd = data[27:24];
+            3'd7: cur_bcd = data[31:28];    // 最左边一位
+            default: cur_bcd = 4'd0;
+        endcase
+    end
+
+
+    reg [7:0] seg_code;
+
+    always @(*) begin
+        case (cur_bcd)
+            4'd0: seg_code = 8'b0011_1111; // 0
+            4'd1: seg_code = 8'b0000_0110; // 1
+            4'd2: seg_code = 8'b0101_1011; // 2
+            4'd3: seg_code = 8'b0100_1111; // 3
+            4'd4: seg_code = 8'b0110_0110; // 4
+            4'd5: seg_code = 8'b0110_1101; // 5
+            4'd6: seg_code = 8'b0111_1101; // 6
+            4'd7: seg_code = 8'b0000_0111; // 7
+            4'd8: seg_code = 8'b0111_1111; // 8
+            4'd9: seg_code = 8'b0110_1111; // 9
+            default: seg_code = 8'b0000_0000; // 其他值灭灯
+        endcase
+    end
+
+    reg [7:0] ds_code;
+
+    always @(*) begin
+        ds_code = 8'b1111_1111;      // 默认全部关闭（全 1）
+        case (scan_sel)
+            3'd0: ds_code[0] = 1'b0; // 第 0 位（最右）
+            3'd1: ds_code[1] = 1'b0;
+            3'd2: ds_code[2] = 1'b0;
+            3'd3: ds_code[3] = 1'b0;
+            3'd4: ds_code[4] = 1'b0;
+            3'd5: ds_code[5] = 1'b0;
+            3'd6: ds_code[6] = 1'b0;
+            3'd7: ds_code[7] = 1'b0; // 第 7 位（最左）
+        endcase
+    end
+
+    always @(posedge clk or negedge rsl) begin
+        if (!rsl) begin
+            {h,g,f,e,d,c,b,a} <= 8'b0;
+            ds               <= 8'hFF;
+        end else begin
+            {h,g,f,e,d,c,b,a} <= seg_code; // 注意顺序对应端口 a~h
+            ds               <= ds_code;
+        end
+    end
+
+endmodule
